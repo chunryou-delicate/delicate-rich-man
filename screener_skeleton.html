@@ -15,18 +15,25 @@
   html,body{background:var(--bg);color:var(--ink);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
     -webkit-font-smoothing:antialiased;line-height:1.45}
-  .wrap{max-width:1080px;margin:0 auto;padding:16px 14px 60px}
+  .wrap{max-width:1200px;margin:0 auto;padding:clamp(12px,2.4vw,22px) clamp(12px,3vw,22px) 60px}
 
   /* header */
   header{display:flex;flex-direction:column;gap:4px;padding:6px 2px 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
-  header h1{font-size:19px;font-weight:700;letter-spacing:-.3px}
+  header h1{font-size:clamp(18px,2.4vw,23px);font-weight:700;letter-spacing:-.3px}
   header .sub{font-size:12.5px;color:var(--dim)}
   .badge{display:inline-block;font-size:10.5px;color:var(--accent2);
     border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-top:6px}
 
   /* layout */
   .grid{display:grid;grid-template-columns:1fr;gap:16px}
-  @media(min-width:860px){.grid{grid-template-columns:320px 1fr;align-items:start}}
+  .filters{display:flex;flex-direction:column;gap:16px;min-width:0}
+  .results{min-width:0}
+  @media(min-width:860px){
+    .grid{grid-template-columns:clamp(280px,26vw,340px) minmax(0,1fr);align-items:start}
+    /* 결과를 스크롤하는 동안 필터는 붙어 있게. 세로가 짧은(가로) 화면이면 필터 안에서만 스크롤 */
+    .filters{position:sticky;top:14px;max-height:calc(100dvh - 28px);
+      overflow-y:auto;scrollbar-width:thin}
+  }
 
   /* panel */
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
@@ -77,7 +84,7 @@
 
   /* result meta */
   .meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
-  .meta .count{font-size:26px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .meta .count{font-size:clamp(22px,2.8vw,28px);font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
   .meta .count small{font-size:12px;color:var(--dim);font-weight:500;margin-left:4px}
   .meta .funnel{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--faint);
     font-variant-numeric:tabular-nums}
@@ -94,7 +101,9 @@
   .sortbar .sb.on{color:var(--ink);border-color:var(--accent)}
 
   /* cards */
-  .cards{display:flex;flex-direction:column;gap:9px}
+  .cards{display:grid;grid-template-columns:1fr;gap:9px;align-items:start}
+  /* 넓은 화면에선 결과가 한 줄로 끝없이 늘어지지 않게 다단으로 자연스럽게 채움 */
+  @media(min-width:1100px){.cards{grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
     padding:12px 13px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
   .rank{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums;
@@ -110,7 +119,7 @@
   .scorebar{grid-column:1/-1;height:4px;background:var(--bar);border-radius:4px;overflow:hidden;margin-top:2px}
   .scorebar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--pass))}
 
-  .empty{text-align:center;padding:40px 20px;color:var(--faint);font-size:13px}
+  .empty{grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--faint);font-size:13px}
   .empty b{color:var(--dim);display:block;margin-bottom:4px;font-size:14px}
 
   .note{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.6;
@@ -174,6 +183,7 @@
     padding:8px 12px;margin-bottom:14px"></div>
 
   <div class="grid">
+    <aside class="filters">
     <!-- ============ 필터 패널 ============ -->
     <div class="panel">
       <div class="panel-h"><span class="n">1</span><h2>자격 필터</h2><span class="tag">대량 컷</span></div>
@@ -201,8 +211,7 @@
       </div>
     </div>
 
-    <div style="display:contents">
-    <div class="panel" style="grid-column:1">
+    <div class="panel">
       <div class="panel-h"><span class="n">2</span><h2>품질 필터</h2><span class="tag">재무 지표</span></div>
       <div class="panel-b">
         <div class="filt">
@@ -240,7 +249,7 @@
       </div>
     </div>
 
-    <div class="panel" style="grid-column:1">
+    <div class="panel">
       <div class="panel-h"><span class="n">3</span><h2>분야 필터</h2><span class="tag">선택</span></div>
       <div class="panel-b">
         <div class="toggle-row" style="padding-top:2px">
@@ -250,10 +259,10 @@
         <div class="chips" id="chips"></div>
       </div>
     </div>
-    </div>
+    </aside>
 
     <!-- ============ 결과 패널 ============ -->
-    <div style="grid-column:1;min-width:0" id="resultCol">
+    <main class="results" id="resultCol">
       <div class="meta">
         <div class="count"><span id="cnt">0</span><small>개 후보</small></div>
         <div class="funnel">
@@ -274,13 +283,14 @@
       </div>
 
       <div class="cards" id="cards"></div>
-    </div>
+    </main>
   </div>
 
   <div class="note">
-    이 화면은 <b>더미 데이터 12종목</b>으로 작동합니다. 슬라이더·숫자를 바꾸면 3층 필터가 실시간으로 걸러내고,
-    통과 종목을 점수순으로 정렬합니다. 실제 상장사 데이터는 PC에서 DART API 수집기를 붙이면 그대로 연결됩니다.
-    점수는 임시 가중식(ROE·저PER·저PBR·저부채)이며, 실제 스코어링 로직은 나중에 확정합니다.
+    현재 <b>DART 재무 실데이터(2,700여 종목)</b>로 작동합니다. 슬라이더·숫자를 바꾸면 3층 필터가 실시간으로 걸러내고,
+    통과 종목을 점수순으로 정렬합니다. <b>시가총액·거래대금·PER·PBR</b>은 시세 소스 연결 전이라 아직 비어(—) 있어,
+    해당 슬라이더는 지금은 결과 개수에 영향이 없습니다(ROE·부채비율만 실제로 작동). 점수는 값이 있는 지표만 반영한
+    임시 가중식이며, 실제 스코어링 로직은 나중에 확정합니다.
   </div>
   <footer>재무 스크리너 뼈대 · v0.1 · 폰/PC 반응형</footer>
 </div>
@@ -301,7 +311,7 @@
 // 실데이터 연결: 아래 DATA_URL 에 data.json 주소만 넣으면 원격 로드로 전환.
 //   비워두면(""), 내장 더미 데이터로 동작.
 //   예: "https://raw.githubusercontent.com/<계정>/<repo>/main/data.json"
-const DATA_URL = "";   // ← 집에서 여기만 채우면 실데이터
+const DATA_URL = "data.json";   // ← 같은 폴더의 data.json 로드 (로컬 서버/호스팅 시). 비우면 더미
 
 const SECTORS = ["IT","바이오","2차전지","반도체","금융","소비재","산업재"];
 
@@ -480,13 +490,21 @@ $("sortbar").onclick=e=>{
 
 function val(id){return parseFloat($(id).value);}
 
-// score: 임시 가중식 (0~100)
+// null 관대: 값이 없으면(수집 전 지표) 해당 조건은 통과시킨다.
+const geOK=(v,min)=> v==null || v>=min;   // 하한 조건
+const leOK=(v,max)=> v==null || v<=max;   // 상한 조건
+
+// score: 임시 가중식 (0~100). 값 있는 지표만 반영해 가중치 정규화 → 지표 일부만 있어도 공정.
 function scoreOf(d){
-  const roeS=Math.min(d.roe/30,1)*35;        // 수익성
-  const perS=Math.min(15/Math.max(d.per,1),1)*25; // 저PER
-  const pbrS=Math.min(1.5/Math.max(d.pbr,.2),1)*20;// 저PBR
-  const debtS=Math.min(Math.max(0,(150-d.debt)/150),1)*20; // 저부채
-  return Math.round(roeS+perS+pbrS+debtS);
+  const parts=[]; // [정규화값(0~1), 가중치]
+  if(d.roe!=null)  parts.push([Math.min(Math.max(d.roe,0)/30,1),35]); // 수익성
+  if(d.per!=null)  parts.push([Math.min(15/Math.max(d.per,1),1),25]); // 저PER
+  if(d.pbr!=null)  parts.push([Math.min(1.5/Math.max(d.pbr,.2),1),20]);// 저PBR
+  if(d.debt!=null) parts.push([Math.min(Math.max(0,(150-d.debt)/150),1),20]); // 저부채
+  if(!parts.length) return 0;
+  const wsum=parts.reduce((s,p)=>s+p[1],0);
+  const raw=parts.reduce((s,p)=>s+p[0]*p[1],0);
+  return Math.round(raw/wsum*100);
 }
 
 function render(){
@@ -495,10 +513,10 @@ function render(){
   const riskOn=$("riskT").checked, secOn=$("secT").checked;
 
   const total=DATA.length;
-  // ① 자격
-  let s1=DATA.filter(d=>d.cap>=cap && d.vol>=vol && (!riskOn || !d.risk));
+  // ① 자격 (값 없는 지표는 통과 — null 관대)
+  let s1=DATA.filter(d=>geOK(d.cap,cap) && geOK(d.vol,vol) && (!riskOn || !d.risk));
   // ② 품질
-  let s2=s1.filter(d=>d.roe>=roe && d.per<=per && d.pbr<=pbr && d.debt<=debt);
+  let s2=s1.filter(d=>geOK(d.roe,roe) && leOK(d.per,per) && leOK(d.pbr,pbr) && leOK(d.debt,debt));
   // ③ 분야
   let s3=s2.filter(d=> !secOn || activeSectors.size===0 || activeSectors.has(d.sector));
 
@@ -513,10 +531,15 @@ function render(){
   else if(s3.length>30){t.classList.add("over");t.textContent="많음 · 조이기";}
   else{t.textContent=s3.length+"개 · 타겟 20~30";}
 
-  // sort
+  // sort (null 은 항상 뒤로)
   const scored=s3.map(d=>({...d,score:scoreOf(d)}));
-  const cmp={score:(a,b)=>b.score-a.score, roe:(a,b)=>b.roe-a.roe,
-    per:(a,b)=>a.per-b.per, pbr:(a,b)=>a.pbr-b.pbr, cap:(a,b)=>b.cap-a.cap};
+  const byNum=(k,asc)=>(a,b)=>{
+    const x=a[k],y=b[k];
+    if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1;
+    return asc?x-y:y-x;
+  };
+  const cmp={score:(a,b)=>b.score-a.score, roe:byNum("roe",false),
+    per:byNum("per",true), pbr:byNum("pbr",true), cap:byNum("cap",false)};
   scored.sort(cmp[sortKey]);
 
   const box=$("cards");
@@ -524,17 +547,19 @@ function render(){
     box.innerHTML='<div class="empty"><b>조건에 맞는 종목이 없습니다</b>필터를 조금 풀어보세요</div>';
     return;
   }
+  const fmt=(v,suf="")=> v==null?"—":v+suf;                      // 값 없으면 —
+  const fmtCap=v=> v==null?"—":v.toLocaleString()+"억";
   box.innerHTML=scored.map((d,i)=>`
     <div class="card">
       <div class="rank">${i+1}</div>
       <div style="min-width:0">
-        <div class="name">${d.name}<span class="sector">${d.sector}</span></div>
+        <div class="name">${d.name}<span class="sector">${d.sector||""}</span></div>
         <div class="mets">
-          <span>ROE <b>${d.roe}%</b></span>
-          <span>PER <b>${d.per}</b></span>
-          <span>PBR <b>${d.pbr}</b></span>
-          <span>부채 <b>${d.debt}%</b></span>
-          <span>시총 <b>${d.cap.toLocaleString()}억</b></span>
+          <span>ROE <b>${fmt(d.roe,"%")}</b></span>
+          <span>PER <b>${fmt(d.per)}</b></span>
+          <span>PBR <b>${fmt(d.pbr)}</b></span>
+          <span>부채 <b>${fmt(d.debt,"%")}</b></span>
+          <span>시총 <b>${fmtCap(d.cap)}</b></span>
         </div>
       </div>
       <div class="score"><div class="v">${d.score}</div><div class="l">score</div></div>
