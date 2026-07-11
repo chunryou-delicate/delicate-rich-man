@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>재무 스크리너 · 뼈대</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232d; --line:#2a323d;
+    --ink:#e6edf3; --dim:#8b98a5; --faint:#5a6675;
+    --pass:#3fb950; --fail:#5a6675; --accent:#4d8bf0; --accent2:#f0a94d;
+    --bar:#243244;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans KR",sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.45}
+  .wrap{max-width:1080px;margin:0 auto;padding:16px 14px 60px}
+
+  /* header */
+  header{display:flex;flex-direction:column;gap:4px;padding:6px 2px 14px;border-bottom:1px solid var(--line);margin-bottom:16px}
+  header h1{font-size:19px;font-weight:700;letter-spacing:-.3px}
+  header .sub{font-size:12.5px;color:var(--dim)}
+  .badge{display:inline-block;font-size:10.5px;color:var(--accent2);
+    border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin-top:6px}
+
+  /* layout */
+  .grid{display:grid;grid-template-columns:1fr;gap:16px}
+  @media(min-width:860px){.grid{grid-template-columns:320px 1fr;align-items:start}}
+
+  /* panel */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .panel-h{padding:12px 14px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px}
+  .panel-h .n{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;
+    border:1px solid var(--line);border-radius:6px;width:22px;height:22px;
+    display:grid;place-items:center;flex:0 0 auto}
+  .panel-h h2{font-size:13.5px;font-weight:650}
+  .panel-h .tag{margin-left:auto;font-size:10.5px;color:var(--dim)}
+  .panel-b{padding:10px 14px 14px}
+
+  /* filter row */
+  .filt{padding:11px 0;border-bottom:1px solid var(--panel2)}
+  .filt:last-child{border-bottom:none}
+  .filt-top{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+  .filt-top label{font-size:13px;font-weight:600}
+  .filt-top .hint{font-size:10.5px;color:var(--faint);margin-left:auto}
+  .ctl{display:flex;align-items:center;gap:10px}
+  .ctl input[type=range]{flex:1;height:4px;-webkit-appearance:none;appearance:none;
+    background:var(--bar);border-radius:4px;outline:none}
+  .ctl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:18px;height:18px;border-radius:50%;background:var(--accent);
+    border:3px solid var(--panel);cursor:pointer;box-shadow:0 0 0 1px var(--accent)}
+  .ctl input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;
+    background:var(--accent);border:3px solid var(--panel);cursor:pointer}
+  .ctl .num{width:74px;flex:0 0 auto}
+  .ctl .num input{width:100%;background:var(--panel2);border:1px solid var(--line);
+    color:var(--ink);border-radius:8px;padding:6px 8px;font-size:13px;text-align:right;
+    font-variant-numeric:tabular-nums}
+  .ctl .unit{font-size:11px;color:var(--dim);width:26px;flex:0 0 auto}
+  .filt.disabled{opacity:.4;pointer-events:none}
+
+  .toggle-row{display:flex;align-items:center;gap:9px;padding:11px 0 3px}
+  .toggle-row label{font-size:13px;font-weight:600}
+  .switch{position:relative;width:40px;height:22px;flex:0 0 auto;margin-left:auto}
+  .switch input{display:none}
+  .switch .track{position:absolute;inset:0;background:var(--bar);border-radius:999px;transition:.15s}
+  .switch .knob{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+    background:#fff;transition:.15s}
+  .switch input:checked+.track{background:var(--accent)}
+  .switch input:checked+.track+.knob{transform:translateX(18px)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .chip{font-size:11.5px;padding:5px 10px;border-radius:999px;cursor:pointer;
+    background:var(--panel2);border:1px solid var(--line);color:var(--dim);user-select:none}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  /* result meta */
+  .meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .meta .count{font-size:26px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .meta .count small{font-size:12px;color:var(--dim);font-weight:500;margin-left:4px}
+  .meta .funnel{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--faint);
+    font-variant-numeric:tabular-nums}
+  .meta .funnel b{color:var(--dim);font-weight:600}
+  .meta .funnel .arw{color:var(--line)}
+  .meta .target{margin-left:auto;font-size:11px;padding:3px 9px;border-radius:999px;
+    border:1px solid var(--line);color:var(--dim)}
+  .meta .target.good{color:var(--pass);border-color:rgba(63,185,80,.4)}
+  .meta .target.over{color:var(--accent2);border-color:rgba(240,169,77,.4)}
+
+  .sortbar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .sortbar .sb{font-size:11px;padding:5px 9px;border-radius:7px;cursor:pointer;
+    background:var(--panel);border:1px solid var(--line);color:var(--dim)}
+  .sortbar .sb.on{color:var(--ink);border-color:var(--accent)}
+
+  /* cards */
+  .cards{display:flex;flex-direction:column;gap:9px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:12px 13px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+  .rank{font-size:12px;color:var(--faint);font-variant-numeric:tabular-nums;
+    width:26px;text-align:center;font-weight:600}
+  .card .name{font-size:14.5px;font-weight:650}
+  .card .name .sector{font-size:10.5px;color:var(--dim);margin-left:6px;font-weight:400}
+  .card .mets{display:flex;gap:14px;flex-wrap:wrap;margin-top:5px}
+  .card .mets span{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .card .mets span b{color:var(--ink);font-weight:600}
+  .score{text-align:right;flex:0 0 auto}
+  .score .v{font-size:20px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+  .score .l{font-size:9.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.5px}
+  .scorebar{grid-column:1/-1;height:4px;background:var(--bar);border-radius:4px;overflow:hidden;margin-top:2px}
+  .scorebar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--pass))}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--faint);font-size:13px}
+  .empty b{color:var(--dim);display:block;margin-bottom:4px;font-size:14px}
+
+  .note{margin-top:18px;font-size:11px;color:var(--faint);line-height:1.6;
+    background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+  .note b{color:var(--accent2)}
+  footer{margin-top:22px;text-align:center;font-size:10.5px;color:var(--faint)}
+
+  /* info button */
+  .info-btn{width:17px;height:17px;flex:0 0 auto;border-radius:50%;
+    border:1px solid var(--line);background:var(--panel2);color:var(--dim);
+    font-size:10.5px;font-weight:700;cursor:pointer;display:inline-grid;place-items:center;
+    line-height:1;padding:0;font-style:italic;font-family:Georgia,serif}
+  .info-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .filt-top label{display:inline-flex;align-items:center;gap:6px}
+
+  /* modal */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:50;
+    display:none;align-items:flex-end;justify-content:center;padding:0}
+  .modal-bg.on{display:flex}
+  @media(min-width:600px){.modal-bg{align-items:center;padding:20px}}
+  .modal{background:var(--panel);border:1px solid var(--line);width:100%;max-width:480px;
+    border-radius:16px 16px 0 0;max-height:86vh;overflow-y:auto;
+    animation:slideup .22s ease}
+  @media(min-width:600px){.modal{border-radius:16px}}
+  @keyframes slideup{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+  .modal-h{position:sticky;top:0;background:var(--panel);padding:16px 18px 12px;
+    border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+  .modal-h .tt{font-size:16px;font-weight:700}
+  .modal-h .tt small{display:block;font-size:11.5px;color:var(--dim);font-weight:400;margin-top:3px}
+  .modal-h .x{margin-left:auto;background:var(--panel2);border:1px solid var(--line);
+    color:var(--dim);width:28px;height:28px;border-radius:8px;font-size:16px;cursor:pointer;flex:0 0 auto}
+  .modal-b{padding:14px 18px 22px}
+  .modal-b h4{font-size:12px;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;
+    margin:16px 0 7px;font-weight:700}
+  .modal-b h4:first-child{margin-top:0}
+  .modal-b p{font-size:13.5px;color:var(--ink);line-height:1.6;margin-bottom:8px}
+  .modal-b .formula{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:9px 12px;font-size:12.5px;color:var(--accent2);font-variant-numeric:tabular-nums;margin:4px 0 10px}
+  .rangebar{display:flex;flex-direction:column;gap:7px;margin-top:4px}
+  .rangebar .rr{display:grid;grid-template-columns:88px 1fr;gap:10px;align-items:start;
+    font-size:12.5px;padding:7px 0;border-top:1px solid var(--panel2)}
+  .rangebar .rr:first-child{border-top:none}
+  .rangebar .rr .lv{font-weight:700;font-variant-numeric:tabular-nums}
+  .rangebar .rr .ds{color:var(--dim);line-height:1.5}
+  .rangebar .rr .ds em{color:var(--ink);font-style:normal;font-weight:600}
+  .lv.a{color:var(--pass)} .lv.b{color:var(--accent)} .lv.c{color:var(--accent2)} .lv.d{color:#e5687a}
+  .exlist{font-size:12.5px;color:var(--dim);line-height:1.7}
+  .exlist b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>재무 스크리너</h1>
+    <div class="sub">조건으로 상장사를 걸러 후보를 뽑는 도구 · 1단계 뼈대</div>
+    <span class="badge" id="srcBadge">더미 데이터 · 실데이터는 PC에서 DART 연결 시</span>
+  </header>
+
+  <div id="srcBar" style="display:none;font-size:11.5px;color:var(--dim);
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 12px;margin-bottom:14px"></div>
+
+  <div class="grid">
+    <!-- ============ 필터 패널 ============ -->
+    <div class="panel">
+      <div class="panel-h"><span class="n">1</span><h2>자격 필터</h2><span class="tag">대량 컷</span></div>
+      <div class="panel-b">
+        <div class="filt">
+          <div class="filt-top"><label data-info="cap">시가총액 하한</label><span class="hint">소형주 제외</span></div>
+          <div class="ctl">
+            <input type="range" id="capR" min="0" max="10000" step="100" value="1000">
+            <div class="num"><input type="number" id="capN" value="1000"></div>
+            <span class="unit">억</span>
+          </div>
+        </div>
+        <div class="filt">
+          <div class="filt-top"><label data-info="vol">거래대금 하한</label><span class="hint">유동성</span></div>
+          <div class="ctl">
+            <input type="range" id="volR" min="0" max="500" step="10" value="50">
+            <div class="num"><input type="number" id="volN" value="50"></div>
+            <span class="unit">억</span>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <label data-info="risk">부실·관리종목 제외</label>
+          <span class="switch"><input type="checkbox" id="riskT" checked><span class="track"></span><span class="knob"></span></span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:contents">
+    <div class="panel" style="grid-column:1">
+      <div class="panel-h"><span class="n">2</span><h2>품질 필터</h2><span class="tag">재무 지표</span></div>
+      <div class="panel-b">
+        <div class="filt">
+          <div class="filt-top"><label data-info="roe">ROE 최소</label><span class="hint">수익 효율 · 높을수록↑</span></div>
+          <div class="ctl">
+            <input type="range" id="roeR" min="0" max="40" step="1" value="15">
+            <div class="num"><input type="number" id="roeN" value="15"></div>
+            <span class="unit">%</span>
+          </div>
+        </div>
+        <div class="filt">
+          <div class="filt-top"><label data-info="per">PER 최대</label><span class="hint">쌀수록 낮음</span></div>
+          <div class="ctl">
+            <input type="range" id="perR" min="1" max="50" step="1" value="15">
+            <div class="num"><input type="number" id="perN" value="15"></div>
+            <span class="unit">배</span>
+          </div>
+        </div>
+        <div class="filt">
+          <div class="filt-top"><label data-info="pbr">PBR 최대</label><span class="hint">자산 대비 가격</span></div>
+          <div class="ctl">
+            <input type="range" id="pbrR" min="0.2" max="8" step="0.1" value="2.0">
+            <div class="num"><input type="number" id="pbrN" value="2.0" step="0.1"></div>
+            <span class="unit">배</span>
+          </div>
+        </div>
+        <div class="filt">
+          <div class="filt-top"><label data-info="debt">부채비율 최대</label><span class="hint">낮을수록 안전</span></div>
+          <div class="ctl">
+            <input type="range" id="debtR" min="0" max="300" step="10" value="120">
+            <div class="num"><input type="number" id="debtN" value="120"></div>
+            <span class="unit">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="grid-column:1">
+      <div class="panel-h"><span class="n">3</span><h2>분야 필터</h2><span class="tag">선택</span></div>
+      <div class="panel-b">
+        <div class="toggle-row" style="padding-top:2px">
+          <label>섹터 좁히기 사용</label>
+          <span class="switch"><input type="checkbox" id="secT"><span class="track"></span><span class="knob"></span></span>
+        </div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+    </div>
+
+    <!-- ============ 결과 패널 ============ -->
+    <div style="grid-column:1;min-width:0" id="resultCol">
+      <div class="meta">
+        <div class="count"><span id="cnt">0</span><small>개 후보</small></div>
+        <div class="funnel">
+          <b id="f0">0</b><span class="arw">→</span>
+          <b id="f1">0</b><span class="arw">→</span>
+          <b id="f2">0</b><span class="arw">→</span>
+          <b id="f3">0</b>
+        </div>
+        <div class="target" id="target">타겟 20~30</div>
+      </div>
+
+      <div class="sortbar" id="sortbar">
+        <span class="sb on" data-k="score">점수순</span>
+        <span class="sb" data-k="roe">ROE↓</span>
+        <span class="sb" data-k="per">PER↑</span>
+        <span class="sb" data-k="pbr">PBR↑</span>
+        <span class="sb" data-k="cap">시총↓</span>
+      </div>
+
+      <div class="cards" id="cards"></div>
+    </div>
+  </div>
+
+  <div class="note">
+    이 화면은 <b>더미 데이터 12종목</b>으로 작동합니다. 슬라이더·숫자를 바꾸면 3층 필터가 실시간으로 걸러내고,
+    통과 종목을 점수순으로 정렬합니다. 실제 상장사 데이터는 PC에서 DART API 수집기를 붙이면 그대로 연결됩니다.
+    점수는 임시 가중식(ROE·저PER·저PBR·저부채)이며, 실제 스코어링 로직은 나중에 확정합니다.
+  </div>
+  <footer>재무 스크리너 뼈대 · v0.1 · 폰/PC 반응형</footer>
+</div>
+
+<!-- 상세 설명 모달 -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <div class="modal-h">
+      <div class="tt" id="mTitle">—<small id="mSub"></small></div>
+      <button class="x" id="mClose">✕</button>
+    </div>
+    <div class="modal-b" id="mBody"></div>
+  </div>
+</div>
+
+<script>
+// ===== 데이터 소스 =====
+// 실데이터 연결: 아래 DATA_URL 에 data.json 주소만 넣으면 원격 로드로 전환.
+//   비워두면(""), 내장 더미 데이터로 동작.
+//   예: "https://raw.githubusercontent.com/<계정>/<repo>/main/data.json"
+const DATA_URL = "";   // ← 집에서 여기만 채우면 실데이터
+
+const SECTORS = ["IT","바이오","2차전지","반도체","금융","소비재","산업재"];
+
+// 내장 더미 (DATA_URL 비었을 때만 사용)
+const DUMMY = [
+  {name:"가온테크",    sector:"반도체",  cap:3200, vol:180, roe:22, per:9,  pbr:1.4, debt:45,  risk:false},
+  {name:"세림바이오",  sector:"바이오",  cap:1500, vol:90,  roe:18, per:14, pbr:2.6, debt:60,  risk:false},
+  {name:"한빛소재",    sector:"2차전지",cap:5400, vol:260, roe:16, per:11, pbr:1.8, debt:110, risk:false},
+  {name:"대성산업",    sector:"산업재",  cap:8900, vol:140, roe:12, per:7,  pbr:0.8, debt:95,  risk:false},
+  {name:"뉴런소프트",  sector:"IT",      cap:2100, vol:120, roe:26, per:19, pbr:3.4, debt:30,  risk:false},
+  {name:"미래금융지주",sector:"금융",    cap:12000,vol:300, roe:11, per:6,  pbr:0.5, debt:0,   risk:false},
+  {name:"청우식품",    sector:"소비재",  cap:900,  vol:35,  roe:14, per:10, pbr:1.1, debt:70,  risk:false},
+  {name:"에코셀",      sector:"2차전지",cap:640,  vol:22,  roe:31, per:8,  pbr:1.6, debt:130, risk:true },
+  {name:"광명반도체",  sector:"반도체",  cap:4300, vol:210, roe:19, per:13, pbr:2.1, debt:55,  risk:false},
+  {name:"제일제약",    sector:"바이오",  cap:2700, vol:75,  roe:9,  per:22, pbr:2.9, debt:40,  risk:false},
+  {name:"티에스전자",  sector:"IT",      cap:1800, vol:60,  roe:17, per:12, pbr:1.5, debt:85,  risk:false},
+  {name:"동양중공업",  sector:"산업재",  cap:6100, vol:95,  roe:8,  per:16, pbr:0.9, debt:180, risk:false},
+];
+
+let DATA = DUMMY.slice();   // 실데이터 로드되면 교체됨
+
+const $=id=>document.getElementById(id);
+let sortKey="score";
+let activeSectors=new Set();
+
+// ===== 항목별 상세 설명 콘텐츠 =====
+// key = 필터 input의 접두어(capN → cap). 각 항목: 정의/공식/레인지/예시
+const INFO = {
+  cap:{
+    title:"시가총액", sub:"회사의 전체 몸값 (주가 × 총 주식수)",
+    what:"시장이 이 회사 전체에 매긴 가격입니다. 클수록 대형·안정, 작을수록 변동이 크고 위험합니다. 자동매매에서 <em>너무 작은 회사를 걸러내는 안전장치</em>로 씁니다.",
+    ranges:[
+      ["a","1조 이상","<em>대형주</em> · 삼성전자·현대차급. 안정적이나 급등은 드묾"],
+      ["b","3천억~1조","<em>중형주</em> · 코스피 중견. 안정과 성장 사이"],
+      ["c","1천억~3천억","<em>중소형</em> · 성장 여지 크나 변동성 높음"],
+      ["d","1천억 미만","<em>소형주</em> · 급등락·유동성 위험 큼. 자동매매 진입 비권장"],
+    ],
+    ex:"참고 감각: 삼성전자 수백조, 중견 제조사 수천억, 신생 코스닥 수백억 규모. <b>하한을 1,000억쯤 두면</b> 위험한 초소형주가 후보에서 대량 제외됩니다."
+  },
+  vol:{
+    title:"거래대금", sub:"하루에 실제로 사고팔린 금액",
+    what:"이 종목이 하루에 얼마나 활발히 거래되는지입니다. 낮으면 <em>내가 팔고 싶을 때 사줄 사람이 없어</em> 제값에 못 팔거나 체결이 안 됩니다(유동성 위험). 자동매매에선 특히 치명적.",
+    ranges:[
+      ["a","500억↑","매우 활발 · 언제든 매매 쉬움"],
+      ["b","100~500억","무난 · 일반적 거래엔 충분"],
+      ["c","30~100억","주의 · 큰 물량은 밀릴 수 있음"],
+      ["d","30억 미만","위험 · 팔 때 체결 안 되거나 슬리피지 큼"],
+    ],
+    ex:"슬리피지=내가 원한 가격과 실제 체결가의 차이. 거래대금이 얇으면 목표가 도달해도 <b>실제로 못 파는</b> 상황이 생깁니다. 하한을 두는 이유."
+  },
+  risk:{
+    title:"부실·관리종목 제외", sub:"위험 신호 있는 종목 걷어내기",
+    what:"관리종목·거래정지·자본잠식·연속적자 등 <em>구조적 위험 신호</em>가 있는 회사를 후보에서 뺍니다. 재무 지표가 좋아 보여도 이런 종목은 상장폐지·거래정지로 <em>돈이 묶이거나 사라질</em> 수 있어, 자동 진입에서 가장 먼저 막아야 합니다.",
+    ranges:[
+      ["a","켜짐(권장)","위험 신호 종목 자동 제외 — 안전"],
+      ["d","꺼짐","전부 후보에 포함 — 사고 위험↑"],
+    ],
+    ex:"BDO로 치면 '교환 불가 재료를 애초에 목록에서 빼는' 것과 같은 1차 안전 필터입니다. 기본은 켜두는 걸 강권."
+  },
+  roe:{
+    title:"ROE (자기자본이익률)", sub:"가진 자본으로 얼마나 잘 버나 — 수익 효율",
+    what:"회사가 <em>자기 돈(자본) 대비 얼마나 이익</em>을 냈는지. 공학식으로 보면 '투입 자본 대비 출력(이익)의 효율'입니다. 높을수록 장사를 효율적으로 하는 회사.",
+    formula:"ROE = 순이익 ÷ 자기자본 × 100 (%)",
+    ranges:[
+      ["a","20%↑","매우 우수 · 자본을 아주 잘 굴림"],
+      ["b","15~20%","우량 · 일반적 '좋은 회사' 기준선"],
+      ["c","8~15%","보통 · 무난한 수준"],
+      ["d","8% 미만","낮음 · 자본 대비 이익이 약함"],
+    ],
+    ex:"단, ROE가 <b>빚을 많이 내서</b> 높아지는 경우도 있어, 반드시 <b>부채비율과 함께</b> 봐야 합니다. 높은 ROE + 낮은 부채가 이상적."
+  },
+  per:{
+    title:"PER (주가수익비율)", sub:"이익으로 원금 뽑는 데 몇 년? — 쌀수록 낮음",
+    what:"지금 이익 수준이면 <em>투자 원금을 회수하는 데 몇 년</em> 걸리나로 보면 직관적입니다. PER 10 = '지금 이익이면 10년이면 본전'. 낮을수록 싸게 거래된다는 뜻.",
+    formula:"PER = 시가총액 ÷ 순이익 (또는 주가 ÷ 주당순이익)",
+    ranges:[
+      ["a","10 이하","저평가 가능성 · 싸게 거래 (단, 싼 이유 확인)"],
+      ["b","10~15","무난한 밸류에이션"],
+      ["c","15~25","다소 비쌈 · 성장 기대가 반영됨"],
+      ["d","25↑","고평가 · 높은 성장을 이미 가격에 반영"],
+    ],
+    ex:"<b>업종마다 기준이 완전 다름</b>: IT·바이오는 성장 기대로 PER이 높고(20~40 흔함), 은행·중공업은 낮음(5~10). 그래서 <b>같은 업종끼리 비교</b>가 맞습니다."
+  },
+  pbr:{
+    title:"PBR (주가순자산비율)", sub:"회사 자산 대비 주가가 몇 배?",
+    what:"회사를 <em>지금 청산하면 남는 자산(순자산)</em> 대비 주가가 몇 배인지. PBR 1 = '장부상 자산 = 시가총액'. 1보다 낮으면 자산보다도 싸게 거래된다는 의미.",
+    formula:"PBR = 시가총액 ÷ 자기자본 (또는 주가 ÷ 주당순자산)",
+    ranges:[
+      ["a","1 이하","자산보다 쌈 · 저평가 신호 (밸류 트랩 주의)"],
+      ["b","1~1.5","무난"],
+      ["c","1.5~3","다소 비쌈"],
+      ["d","3↑","자산 대비 고평가 · 미래가치 기대 큼"],
+    ],
+    ex:"<b>밸류 트랩</b>=싼 데는 싼 이유가 있는 경우. PBR이 극단적으로 낮은데 몇 년째 안 오르면, 시장이 그 자산을 '죽은 자산'으로 보는 것일 수 있습니다. 낮다고 무조건 좋은 게 아님."
+  },
+  debt:{
+    title:"부채비율", sub:"자본 대비 빚이 얼마 — 낮을수록 안전",
+    what:"자기자본 대비 <em>빚(부채)이 얼마나 많은지</em>. 빚이 많으면 불황·금리인상 때 이자 부담으로 휘청이거나 도산 위험이 커집니다. 낮을수록 재무적으로 튼튼.",
+    formula:"부채비율 = 부채 ÷ 자기자본 × 100 (%)",
+    ranges:[
+      ["a","50% 이하","매우 안전 · 빚 적음"],
+      ["b","50~100%","양호 · 통상 100% 이하를 선호"],
+      ["c","100~200%","주의 · 업종에 따라 정상일 수도"],
+      ["d","200%↑","위험 · 재무 부담 큼"],
+    ],
+    ex:"단 <b>업종 특성</b> 고려 필요: 건설·조선·금융은 사업 구조상 부채가 원래 높습니다. 제조·IT는 낮은 게 정상. ROE와 짝지어 보세요."
+  },
+};
+
+// ===== 모달 =====
+const modal=$("modal");
+function openInfo(key){
+  const d=INFO[key]; if(!d) return;
+  $("mTitle").childNodes[0].nodeValue=d.title;
+  $("mSub").textContent=d.sub||"";
+  let h="";
+  h+=`<h4>이게 뭔가요</h4><p>${d.what}</p>`;
+  if(d.formula) h+=`<div class="formula">${d.formula}</div>`;
+  h+=`<h4>값의 수준 (레인지별)</h4><div class="rangebar">`;
+  d.ranges.forEach(r=>{ h+=`<div class="rr"><div class="lv ${r[0]}">${r[1]}</div><div class="ds">${r[2]}</div></div>`; });
+  h+=`</div>`;
+  if(d.ex) h+=`<h4>참고 · 예시</h4><p class="exlist">${d.ex}</p>`;
+  $("mBody").innerHTML=h;
+  modal.classList.add("on");
+}
+function closeInfo(){modal.classList.remove("on");}
+$("mClose").onclick=closeInfo;
+modal.onclick=e=>{if(e.target===modal)closeInfo();};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeInfo();});
+
+// ⓘ 버튼을 각 필터 라벨에 자동 부착
+function attachInfo(){
+  document.querySelectorAll("[data-info]").forEach(lb=>{
+    const b=document.createElement("button");
+    b.className="info-btn";b.textContent="i";b.type="button";
+    b.setAttribute("aria-label","설명 보기");
+    b.onclick=()=>openInfo(lb.dataset.info);
+    lb.appendChild(b);
+  });
+}
+
+// chips
+const chipsEl=$("chips");
+SECTORS.forEach(s=>{
+  const c=document.createElement("span");
+  c.className="chip";c.textContent=s;c.dataset.s=s;
+  c.onclick=()=>{ if(!$("secT").checked) return;
+    c.classList.toggle("on");
+    c.classList.contains("on")?activeSectors.add(s):activeSectors.delete(s);
+    render(); };
+  chipsEl.appendChild(c);
+});
+
+// slider <-> number sync
+function link(rId,nId){
+  const r=$(rId),n=$(nId);
+  r.oninput=()=>{n.value=r.value;render();};
+  n.oninput=()=>{r.value=n.value;render();};
+}
+["cap","vol","roe","per","pbr","debt"].forEach(k=>link(k+"R",k+"N"));
+$("riskT").onchange=render;
+$("secT").onchange=()=>{
+  const on=$("secT").checked;
+  document.querySelector(".panel:last-of-type").classList.toggle("disabled",false);
+  chipsEl.style.opacity=on?"1":".35";
+  chipsEl.style.pointerEvents=on?"auto":"none";
+  if(!on){activeSectors.clear();document.querySelectorAll(".chip.on").forEach(c=>c.classList.remove("on"));}
+  render();
+};
+$("sortbar").onclick=e=>{
+  if(!e.target.dataset.k)return;
+  sortKey=e.target.dataset.k;
+  document.querySelectorAll(".sb").forEach(s=>s.classList.toggle("on",s.dataset.k===sortKey));
+  render();
+};
+
+function val(id){return parseFloat($(id).value);}
+
+// score: 임시 가중식 (0~100)
+function scoreOf(d){
+  const roeS=Math.min(d.roe/30,1)*35;        // 수익성
+  const perS=Math.min(15/Math.max(d.per,1),1)*25; // 저PER
+  const pbrS=Math.min(1.5/Math.max(d.pbr,.2),1)*20;// 저PBR
+  const debtS=Math.min(Math.max(0,(150-d.debt)/150),1)*20; // 저부채
+  return Math.round(roeS+perS+pbrS+debtS);
+}
+
+function render(){
+  const cap=val("capN"),vol=val("volN"),roe=val("roeN"),
+        per=val("perN"),pbr=val("pbrN"),debt=val("debtN");
+  const riskOn=$("riskT").checked, secOn=$("secT").checked;
+
+  const total=DATA.length;
+  // ① 자격
+  let s1=DATA.filter(d=>d.cap>=cap && d.vol>=vol && (!riskOn || !d.risk));
+  // ② 품질
+  let s2=s1.filter(d=>d.roe>=roe && d.per<=per && d.pbr<=pbr && d.debt<=debt);
+  // ③ 분야
+  let s3=s2.filter(d=> !secOn || activeSectors.size===0 || activeSectors.has(d.sector));
+
+  $("f0").textContent=total; $("f1").textContent=s1.length;
+  $("f2").textContent=s2.length; $("f3").textContent=s3.length;
+  $("cnt").textContent=s3.length;
+
+  // target badge
+  const t=$("target");
+  t.className="target";
+  if(s3.length>=20&&s3.length<=30){t.classList.add("good");t.textContent="타겟 범위 ✓";}
+  else if(s3.length>30){t.classList.add("over");t.textContent="많음 · 조이기";}
+  else{t.textContent=s3.length+"개 · 타겟 20~30";}
+
+  // sort
+  const scored=s3.map(d=>({...d,score:scoreOf(d)}));
+  const cmp={score:(a,b)=>b.score-a.score, roe:(a,b)=>b.roe-a.roe,
+    per:(a,b)=>a.per-b.per, pbr:(a,b)=>a.pbr-b.pbr, cap:(a,b)=>b.cap-a.cap};
+  scored.sort(cmp[sortKey]);
+
+  const box=$("cards");
+  if(scored.length===0){
+    box.innerHTML='<div class="empty"><b>조건에 맞는 종목이 없습니다</b>필터를 조금 풀어보세요</div>';
+    return;
+  }
+  box.innerHTML=scored.map((d,i)=>`
+    <div class="card">
+      <div class="rank">${i+1}</div>
+      <div style="min-width:0">
+        <div class="name">${d.name}<span class="sector">${d.sector}</span></div>
+        <div class="mets">
+          <span>ROE <b>${d.roe}%</b></span>
+          <span>PER <b>${d.per}</b></span>
+          <span>PBR <b>${d.pbr}</b></span>
+          <span>부채 <b>${d.debt}%</b></span>
+          <span>시총 <b>${d.cap.toLocaleString()}억</b></span>
+        </div>
+      </div>
+      <div class="score"><div class="v">${d.score}</div><div class="l">score</div></div>
+      <div class="scorebar"><i style="width:${d.score}%"></i></div>
+    </div>`).join("");
+}
+
+// ===== 데이터 소스 로딩 =====
+function fmtAgo(iso){
+  try{
+    const diff=(Date.now()-new Date(iso).getTime())/3600000;
+    if(diff<1) return Math.round(diff*60)+"분 전";
+    if(diff<48) return Math.round(diff)+"시간 전";
+    return Math.round(diff/24)+"일 전";
+  }catch(e){return iso;}
+}
+async function loadData(){
+  const badge=$("srcBadge"), bar=$("srcBar");
+  if(!DATA_URL){                       // 더미 모드
+    render(); return;
+  }
+  badge.textContent="실데이터 불러오는 중…";
+  bar.style.display="block"; bar.textContent="원격 data.json 로드 중…";
+  try{
+    const res=await fetch(DATA_URL,{cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    const json=await res.json();
+    const items=Array.isArray(json)?json:json.items;
+    if(!items||!items.length) throw new Error("빈 데이터");
+    DATA=items;
+    badge.textContent="실데이터 연결됨";
+    badge.style.color="var(--pass)";
+    bar.textContent=`기준: ${json.updated?fmtAgo(json.updated):"?"} · ${items.length}종목 · ${json.source||"원격"}`;
+  }catch(e){
+    // 실패 시 더미로 폴백 (화면은 죽지 않게)
+    DATA=DUMMY.slice();
+    badge.textContent="원격 로드 실패 · 더미로 표시";
+    badge.style.color="var(--accent2)";
+    bar.textContent=`불러오기 실패: ${e.message} · URL을 확인하세요 (더미 데이터로 계속)`;
+  }
+  render();
+}
+
+// init
+attachInfo();
+chipsEl.style.opacity=".35";chipsEl.style.pointerEvents="none";
+loadData();
+</script>
+</body>
+</html>

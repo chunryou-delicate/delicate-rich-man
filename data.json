@@ -1,0 +1,66 @@
+{
+  "updated": "2026-07-11T22:21:43+09:00",
+  "source": "SAMPLE",
+  "items": [
+    {
+      "name": "가온테크",
+      "code": "000001",
+      "sector": "반도체",
+      "cap": 3200,
+      "vol": 180,
+      "roe": 22,
+      "per": 9,
+      "pbr": 1.4,
+      "debt": 45,
+      "risk": false
+    },
+    {
+      "name": "세림바이오",
+      "code": "000002",
+      "sector": "바이오",
+      "cap": 1500,
+      "vol": 90,
+      "roe": 18,
+      "per": 14,
+      "pbr": 2.6,
+      "debt": 60,
+      "risk": false
+    },
+    {
+      "name": "한빛소재",
+      "code": "000003",
+      "sector": "2차전지",
+      "cap": 5400,
+      "vol": 260,
+      "roe": 16,
+      "per": 11,
+      "pbr": 1.8,
+      "debt": 110,
+      "risk": false
+    },
+    {
+      "name": "대성산업",
+      "code": "000004",
+      "sector": "산업재",
+      "cap": 8900,
+      "vol": 140,
+      "roe": 12,
+      "per": 7,
+      "pbr": 0.8,
+      "debt": 95,
+      "risk": false
+    },
+    {
+      "name": "미래금융지주",
+      "code": "000005",
+      "sector": "금융",
+      "cap": 12000,
+      "vol": 300,
+      "roe": 11,
+      "per": 6,
+      "pbr": 0.5,
+      "debt": 0,
+      "risk": false
+    }
+  ]
+}
