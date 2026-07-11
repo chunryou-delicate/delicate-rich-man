@@ -287,10 +287,10 @@
   </div>
 
   <div class="note">
-    현재 <b>DART 재무 실데이터(2,700여 종목)</b>로 작동합니다. 슬라이더·숫자를 바꾸면 3층 필터가 실시간으로 걸러내고,
-    통과 종목을 점수순으로 정렬합니다. <b>시가총액·거래대금·PER·PBR</b>은 시세 소스 연결 전이라 아직 비어(—) 있어,
-    해당 슬라이더는 지금은 결과 개수에 영향이 없습니다(ROE·부채비율만 실제로 작동). 점수는 값이 있는 지표만 반영한
-    임시 가중식이며, 실제 스코어링 로직은 나중에 확정합니다.
+    <b>DART 재무 + KRX 시세 실데이터(2,700여 종목)</b>로 작동합니다. 슬라이더·숫자를 바꾸면 3층 필터가 실시간으로
+    걸러내고, 통과 종목을 점수순으로 정렬합니다. <b>자격 필터(시총·거래대금)</b>는 값이 없는 종목을 안전장치로 제외하고,
+    <b>품질 필터(ROE·PER·PBR·부채)</b>는 값 없는 지표는 통과시킵니다. 점수는 값이 있는 지표만 반영한 임시 가중식이며,
+    실제 스코어링 로직은 나중에 확정합니다.
   </div>
   <footer>재무 스크리너 뼈대 · v0.1 · 폰/PC 반응형</footer>
 </div>
@@ -490,9 +490,11 @@ $("sortbar").onclick=e=>{
 
 function val(id){return parseFloat($(id).value);}
 
-// null 관대: 값이 없으면(수집 전 지표) 해당 조건은 통과시킨다.
-const geOK=(v,min)=> v==null || v>=min;   // 하한 조건
-const leOK=(v,max)=> v==null || v<=max;   // 상한 조건
+// 품질 필터: null 관대 — 값 없으면(시세 미연동 등) 통과.
+const geOK=(v,min)=> v==null || v>=min;   // 하한 조건(관대)
+const leOK=(v,max)=> v==null || v<=max;   // 상한 조건(관대)
+// 자격 필터: 엄격 — 값 없으면 탈락. 규모·유동성 미확인 종목은 안전장치로 후보에서 뺀다.
+const geStrict=(v,min)=> v!=null && v>=min;
 
 // score: 임시 가중식 (0~100). 값 있는 지표만 반영해 가중치 정규화 → 지표 일부만 있어도 공정.
 function scoreOf(d){
@@ -513,8 +515,8 @@ function render(){
   const riskOn=$("riskT").checked, secOn=$("secT").checked;
 
   const total=DATA.length;
-  // ① 자격 (값 없는 지표는 통과 — null 관대)
-  let s1=DATA.filter(d=>geOK(d.cap,cap) && geOK(d.vol,vol) && (!riskOn || !d.risk));
+  // ① 자격 (엄격 — 시총·거래대금 값 없으면 탈락. 규모·유동성 미확인 컷)
+  let s1=DATA.filter(d=>geStrict(d.cap,cap) && geStrict(d.vol,vol) && (!riskOn || !d.risk));
   // ② 품질
   let s2=s1.filter(d=>geOK(d.roe,roe) && leOK(d.per,per) && leOK(d.pbr,pbr) && leOK(d.debt,debt));
   // ③ 분야
