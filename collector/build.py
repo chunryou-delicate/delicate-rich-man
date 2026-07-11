@@ -45,7 +45,15 @@ def build_sample() -> dict:
 
 
 def build_real(bsns_year: str, reprt_code: str, limit: int | None,
-               throttle: float) -> dict:
+               throttle: float, with_price: bool = True) -> dict:
+    # 시세 스냅샷(시총·거래대금·PER·PBR)을 먼저 받아둔다. 종목코드로 병합.
+    price, price_date = ({}, None)
+    if with_price:
+        from . import krx
+        print("KRX 시세 스냅샷 조회 중…")
+        price, price_date = krx.get_price_snapshot()
+        print(f"  시세 {len(price)}종목 확보 (기준일 {price_date})")
+
     corps = list(dart.iter_listed(limit=limit))
     items: list[dict] = []
     for i, c in enumerate(corps, 1):
@@ -56,24 +64,28 @@ def build_real(bsns_year: str, reprt_code: str, limit: int | None,
         m = metrics.compute(rows)
         if m.roe is None and m.debt is None:      # 재무 파싱 실패 → 스킵
             continue
+        p = price.get(c.stock_code, {})            # 시세 (없으면 빈 dict → None들)
         items.append({
             "name": c.name,
             "code": c.stock_code,
             "sector": "",                          # 업종 매핑은 이후 보강(DART company.induty)
-            "cap": m.cap,                          # KIS 연동 전까지 None
-            "vol": m.vol,                          # KIS 연동 전까지 None
-            "roe": m.roe,
-            "per": m.per,                          # KIS 연동 전까지 None
-            "pbr": m.pbr,                          # KIS 연동 전까지 None
-            "debt": m.debt,
+            "cap": p.get("cap"),                    # KRX 시가총액(억)
+            "vol": p.get("vol"),                    # KRX 거래대금(억)
+            "roe": m.roe,                           # DART 재무
+            "per": p.get("per"),                    # KRX
+            "pbr": p.get("pbr"),                    # KRX
+            "debt": m.debt,                         # DART 재무
             "risk": metrics.is_risky(rows, m),
         })
         if i % 100 == 0:
             print(f"  ...{i}/{len(corps)} 처리, 수집 {len(items)}건")
 
+    src = f"DART({bsns_year}/{reprt_code})"
+    if price_date:
+        src += f"+KRX({price_date})"
     return {
         "updated": datetime.now(KST).isoformat(timespec="seconds"),
-        "source": f"DART({bsns_year}/{reprt_code})",
+        "source": src,
         "items": items,
     }
 
@@ -91,6 +103,8 @@ def main() -> None:
                    help="보고서 종류(annual/half/q1/q3)")
     p.add_argument("--throttle", type=float, default=0.0,
                    help="종목당 요청 간 대기(초) — 호출 한도 여유용")
+    p.add_argument("--no-price", action="store_true",
+                   help="KRX 시세 병합 생략(재무 지표만)")
     args = p.parse_args()
 
     if args.sample:
@@ -101,7 +115,8 @@ def main() -> None:
                 "DART_API_KEY 없음. .env 에 키를 채우거나 collector/README.md 발급 안내를 참조,\n"
                 "또는 지금은 `python -m collector.build --sample` 로 배관만 확인하세요.")
         payload = build_real(args.year, config.REPRT_CODE[args.report],
-                             args.limit, args.throttle)
+                             args.limit, args.throttle,
+                             with_price=not args.no_price)
 
     config.DATA_JSON.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
