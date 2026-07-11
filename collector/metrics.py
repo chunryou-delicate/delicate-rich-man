@@ -54,7 +54,9 @@ def compute(rows: list[dict]) -> Metrics:
     net = _amount(rows, _ACCOUNT_ALIASES["net_income"])
 
     m = Metrics(net_income=net, equity=equity)
-    if equity and equity != 0:
+    # 자기자본이 0 이하(자본잠식)면 ROE·부채비율은 수학적으로 계산돼도 무의미
+    # (음수/수천% 쓰레기 값)하므로 신뢰불가로 비운다. 위험 플래그는 is_risky가 유지.
+    if equity is not None and equity > 0:
         if net is not None:
             m.roe = round(net / equity * 100, 1)
         if liab is not None:
