@@ -13,6 +13,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import data
+from . import pit_data
+from . import fscore
 
 
 @dataclass
@@ -23,6 +25,10 @@ class Params:
     cap_floor: float = 500        # 시가총액 하한(억) — 극소형 제외(체결 가능성)
     vol_floor: float = 5          # 거래대금 하한(억) — 유동성
     cost_oneway: float = 0.25     # 편도 매매비용(%) — 수수료+세금+슬리피지 근사
+    # 품질 필터(F-Score) — 가치→품질 2단
+    use_fscore: bool = False      # True면 가치 랭킹 상위 풀에 F-Score 필터
+    value_pool: int = 100         # F-Score 계산할 가치 상위 풀 크기(콜 절감용)
+    fscore_min: int = fscore.PASS_THRESHOLD  # 통과 컷 (기본 6/8)
 
 
 @dataclass
@@ -36,7 +42,11 @@ class Result:
 
 
 def _select(date: str, p: Params) -> list[str]:
-    """해당일 유니버스에서 PER·PBR 순위합 상위 N종목 선정."""
+    """해당일 유니버스에서 PER·PBR 순위합 상위 N종목 선정.
+
+    use_fscore=True면: 가치 상위 value_pool 에만 F-Score 계산 → 컷 통과분에서 top_n.
+    (가치→품질 2단. F-Score 계산할 종목을 좁혀 DART 콜 절감.)
+    """
     fund = data.fundamental(date)
     cap = data.market_cap(date)
 
@@ -48,7 +58,25 @@ def _select(date: str, p: Params) -> list[str]:
         return []
     # 마법공식식: 각 지표 오름차순 순위(작을수록 좋음) 합산
     df["rank"] = df["PER"].rank() + df["PBR"].rank()
-    return df.nsmallest(p.top_n, "rank").index.tolist()
+
+    if not p.use_fscore:
+        return df.nsmallest(p.top_n, "rank").index.tolist()
+
+    # ── 품질 필터: 가치 상위 풀만 F-Score, 컷 통과분에서 가치순 top_n ──
+    pool = df.nsmallest(p.value_pool, "rank")
+    cmap = pit_data.corp_map()
+    passed: list[str] = []
+    for ticker in pool.index:
+        corp = cmap.get(ticker)
+        if not corp:                       # corp_code 매핑 실패 → 제외
+            continue
+        cur, prev = pit_data.as_of(corp, date)
+        fs = fscore.compute(cur, prev)      # 금융사·재무부족 → total None → 탈락
+        if fscore.passes(fs, p.fscore_min):
+            passed.append(ticker)
+        if len(passed) >= p.top_n:          # 가치순 앞에서부터라 top_n 채우면 중단
+            break
+    return passed
 
 
 def run(p: Params = Params()) -> Result:
