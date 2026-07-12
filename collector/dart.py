@@ -25,9 +25,10 @@ BASE = "https://opendart.fss.or.kr/api"
 _SESSION = requests.Session()
 
 
-# 대량 수집 중 DART가 rate-limit로 연결을 끊으면(10054) 쿨다운이 길 수 있어
-# 백오프를 넉넉히 준다. 캐시가 쌓이므로 최악의 경우 재실행이 이어받음.
-_BACKOFF = [3, 8, 20, 40, 60, 90]
+# 대량 수집 중 DART가 rate-limit로 연결을 끊으면(10054) 잠깐 쉬었다 재시도.
+# 하드 차단이면 오래 갈 수 있으니 적당히(최대 ~70s)만 버티고, 실패는 수집기가
+# skip-후-재실행으로 메운다(캐시 재개형).
+_BACKOFF = [3, 8, 20, 40]
 
 
 def _get(path: str, params: dict):
