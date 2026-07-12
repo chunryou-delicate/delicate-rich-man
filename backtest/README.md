@@ -16,6 +16,13 @@ backtest/
   metrics.py     CAGR·MDD·샤프·월간승률
   run.py         실행·리포트 (--compare 로 가치only vs 가치+품질 자동 판정)
   collect_pit.py F-Score 과거재무 사전수집 (느리게·재개형, --full 로 전 종목 아카이브)
+  export.py      backtest.json 생성 (뷰어 입력) — 자산곡선·월별보유·이벤트
+```
+뷰어: `../backtest_viewer.html` (backtest.json 을 fetch) — 자산곡선(품질/가치/코스피),
+거시 이벤트(전쟁·금리) 오버레이, 시점 클릭 → 그달 보유종목 드릴다운. 로컬 서버로 연다.
+```bash
+python -m backtest.export       # backtest.json 갱신
+python -m http.server 8000      # → http://127.0.0.1:8000/backtest_viewer.html
 ```
 
 ## 실행
@@ -112,6 +119,7 @@ goalpost 이동/과최적화 방어를 위해 **재실행 전에** 확정한다.
 2. **전 종목 10년 아카이브** — `collect_pit --full`(~38,857조각/고유 2,989종목, ~2일).
    완료 시 어떤 규칙이든 **DART 없이 완전 오프라인** 실험·모의 가능.
 3. **파라미터 민감도** — 대형주 한정·종목수·리밸런싱 주기·거래비용·F-Score 컷.
-4. **백테스트 뷰어(기획)** — engine → `backtest.json` → HTML(스크리너와 동일 골격).
-   자산곡선, 이벤트(전쟁·금리) 오버레이, 시점 클릭 → 그때 보유종목 드릴다운.
+4. **백테스트 뷰어 ✅ v1 완성** — export.py → backtest.json → backtest_viewer.html.
+   자산곡선(품질/가치/코스피) + 이벤트 오버레이 + 시점 클릭 드릴다운.
    목적은 "미래 예측기"가 아니라 **전략 스트레스 테스트 + 국면별 생존 학습기**.
+   (다음: 낙폭 음영, 이벤트 확장, 파라미터를 뷰어에서 조절 등)
