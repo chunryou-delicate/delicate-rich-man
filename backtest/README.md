@@ -63,6 +63,7 @@ python -m backtest.run --cap-floor 5000 --cost 0.4       # 대형주 한정, 비
 ## 다음 (예정)
 
 1. **품질 필터 추가** — F-Score/ROE로 밸류 트랩 방어. 과거 시점 DART 재무(point-in-time) 수집 필요.
+   → PIT·생존편향 검증 완료(✅ 가능): [pit-verification.md](pit-verification.md)
 2. **파라미터 민감도** — 대형주 한정·종목수·리밸런싱 주기·거래비용.
 3. **백테스트 뷰어(기획)** — engine → `backtest.json` → HTML(스크리너와 동일 골격).
    자산곡선, 이벤트(전쟁·금리) 오버레이, 시점 클릭 → 그때 보유종목 드릴다운.
