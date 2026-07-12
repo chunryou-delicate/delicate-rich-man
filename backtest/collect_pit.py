@@ -26,7 +26,7 @@ from .engine import Params
 
 
 def needed_pairs(p: Params) -> set[tuple[str, int]]:
-    """백테스트가 건드릴 (corp_code, year) 집합. KRX·CORPCODE 캐시만 사용(DART 안 씀)."""
+    """이 규칙(가치풀)이 건드릴 (corp_code, year) 집합. KRX·CORPCODE 캐시만 사용."""
     dates = data.rebalance_dates(p.start, p.end)
     cmap = pit_data.corp_map()
     need: set[tuple[str, int]] = set()
@@ -44,6 +44,24 @@ def needed_pairs(p: Params) -> set[tuple[str, int]]:
                 for y in (yd - 1, yd - 2, yd - 3):   # as_of가 볼 수 있는 연도
                     need.add((corp, y))
     return need
+
+
+def needed_pairs_full(p: Params) -> set[tuple[str, int]]:
+    """전 종목 아카이브: 기간 중 한 번이라도 상장됐던 모든 종목 × 필요한 모든 연도.
+
+    이걸 다 받아두면 '어떤 규칙이든' DART 없이 오프라인 실험 가능(생존편향도 완비).
+    유니버스 = 각 리밸런싱일 KRX 단면의 합집합(그때 상장된 종목). 연도 = start-3 ~ end-1.
+    """
+    dates = data.rebalance_dates(p.start, p.end)
+    cmap = pit_data.corp_map()
+    years = range(int(p.start[:4]) - 3, int(p.end[:4]))
+    corps: set[str] = set()
+    for d0 in dates[:-1]:
+        for t in data.fundamental(d0).index:       # 그 시점 상장 전 종목
+            c = cmap.get(t)
+            if c:
+                corps.add(c)
+    return {(c, y) for c in corps for y in years}
 
 
 def _cached_pairs() -> set[tuple[str, int]]:
@@ -72,12 +90,14 @@ def main() -> None:
     ap.add_argument("--end", default="20251231")
     ap.add_argument("--value-pool", type=int, default=100)
     ap.add_argument("--throttle", type=float, default=0.3, help="호출 간 대기(초)")
+    ap.add_argument("--full", action="store_true",
+                    help="전 종목 10년 아카이브(어떤 규칙이든 오프라인). 대량 — 며칠 소요")
     args = ap.parse_args()
 
     p = Params(start=args.start, end=args.end, value_pool=args.value_pool)
     pit_data._THROTTLE = args.throttle          # 수집 속도 조절
 
-    need = needed_pairs(p)
+    need = needed_pairs_full(p) if args.full else needed_pairs(p)
     todo = sorted(need - _cached_pairs())
     print(f"필요 {len(need):,} · 캐시됨 {len(need)-len(todo):,} · 받을 것 {len(todo):,} "
           f"(throttle {args.throttle}s)", flush=True)
