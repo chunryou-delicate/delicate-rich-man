@@ -66,3 +66,11 @@ def kospi(start: str, end: str) -> pd.Series:
     def fetch():
         return stock.get_index_ohlcv_by_date(start, end, "1001")["종가"]
     return _cached(f"kospi_{start}_{end}", fetch)
+
+
+def daily_close(ticker: str, start: str, end: str) -> pd.Series:
+    """종목 일별 종가(수정주가) — 손절·트레일링 시뮬용. 인덱스=Timestamp."""
+    def fetch():
+        df = stock.get_market_ohlcv_by_date(start, end, ticker, adjusted=True)
+        return df["종가"] if len(df) else pd.Series(dtype=float)
+    return _cached(f"close_{ticker}_{start}_{end}", fetch)

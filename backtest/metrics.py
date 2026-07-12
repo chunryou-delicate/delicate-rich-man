@@ -26,6 +26,14 @@ def mdd(equity: list[float]) -> float:
     return worst * 100
 
 
+def calmar(equity: list[float], months: int) -> float:
+    """칼마 = CAGR / |MDD|. 위험(낙폭) 대비 수익. 높을수록 좋음."""
+    m = mdd(equity)
+    if m == 0:
+        return 0.0
+    return cagr(equity, months) / abs(m)
+
+
 def sharpe(monthly_rets: list[float], rf_annual: float = 0.0) -> float:
     """월수익률 리스트 → 연율화 샤프. rf_annual=무위험수익률(연, %)."""
     if len(monthly_rets) < 2:
