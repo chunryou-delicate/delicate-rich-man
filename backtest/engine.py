@@ -87,7 +87,10 @@ def run(p: Params = Params()) -> Result:
     bench_equity, bench_monthly = [1.0], []
     prev: set[str] = set()
 
-    for d0, d1 in zip(dates[:-1], dates[1:]):
+    import sys
+    for idx, (d0, d1) in enumerate(zip(dates[:-1], dates[1:])):
+        if p.use_fscore and idx % 12 == 0:
+            print(f"  [품질수집] {d0[:6]}… ({idx}/{len(dates)-1}개월)", flush=True, file=sys.stderr)
         picks = _select(d0, p)
         pc = data.price_change(d0, d1)
 

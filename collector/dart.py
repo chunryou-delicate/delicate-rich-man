@@ -25,17 +25,23 @@ BASE = "https://opendart.fss.or.kr/api"
 _SESSION = requests.Session()
 
 
-def _get(path: str, params: dict, tries: int = 4):
-    """DART GET + 재시도(백오프). 대량 수집 중 연결 리셋(10054) 등 일시 오류 복구."""
-    for i in range(tries):
+# 대량 수집 중 DART가 rate-limit로 연결을 끊으면(10054) 쿨다운이 길 수 있어
+# 백오프를 넉넉히 준다. 캐시가 쌓이므로 최악의 경우 재실행이 이어받음.
+_BACKOFF = [3, 8, 20, 40, 60, 90]
+
+
+def _get(path: str, params: dict):
+    """DART GET + 재시도(긴 백오프). 연결 리셋/일시차단 복구."""
+    for i, wait in enumerate([0] + _BACKOFF):
+        if wait:
+            time.sleep(wait)
         try:
             res = _SESSION.get(f"{BASE}/{path}", params=params, timeout=30)
             res.raise_for_status()
             return res
         except (requests.ConnectionError, requests.Timeout, requests.HTTPError):
-            if i == tries - 1:
+            if i == len(_BACKOFF):
                 raise
-            time.sleep(1.5 * (i + 1))   # 1.5s, 3s, 4.5s 백오프
 
 
 @dataclass(frozen=True)

@@ -39,7 +39,8 @@ def _amount(rows: list[dict], keys: list[str]) -> float | None:
 
 
 # 대량 수집 시 DART 부하 완화(캐시 미스에만 적용). 재시도는 dart._get 이 담당.
-_THROTTLE = 0.05
+# rate-limit 차단을 피하려 완만하게(캐시된 뒤 재실행은 이 대기 없음).
+_THROTTLE = 0.2
 
 
 def annual(corp_code: str, year: int) -> dict | None:
