@@ -54,6 +54,18 @@ def _cached_pairs() -> set[tuple[str, int]]:
     return out
 
 
+def _dart_up() -> bool:
+    """빠른 단건 프로브(재시도 없음). 차단 중이면 즉시 False → 패스 스킵(헛돌기 방지)."""
+    import requests
+    try:
+        r = requests.get("https://opendart.fss.or.kr/api/list.json", timeout=10,
+                         params={"crtfc_key": config.DART_API_KEY, "corp_code": "00126380",
+                                 "bgn_de": "20240101", "end_de": "20240201"})
+        return r.status_code == 200
+    except Exception:
+        return False
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="F-Score 과거재무 사전수집(재개형)")
     ap.add_argument("--start", default="20150101")
@@ -69,25 +81,36 @@ def main() -> None:
     todo = sorted(need - _cached_pairs())
     print(f"필요 {len(need):,} · 캐시됨 {len(need)-len(todo):,} · 받을 것 {len(todo):,} "
           f"(throttle {args.throttle}s)", flush=True)
+    if not todo:
+        print("전량 수집 완료 → `python -m backtest.run --compare` 즉시 실행 가능.")
+        sys.exit(0)
 
-    ok = fail = 0
+    if not _dart_up():
+        print("DART 아직 차단 중 — 이번 패스 스킵. 나중에 재시도.")
+        sys.exit(2)
+
+    ok = fail = streak = 0
     for i, (corp, year) in enumerate(todo, 1):
         try:
             pit_data.annual(corp, year)         # 캐시에 저장됨(값 무관)
             ok += 1
+            streak = 0
         except Exception as e:                  # 실패내성: 로그 후 계속
             fail += 1
+            streak += 1
             if fail <= 20:
                 print(f"  skip {corp}/{year}: {type(e).__name__}", flush=True)
+            if streak >= 12:                    # DART 재차단 추정 → 패스 중단(헛돌기 방지)
+                print("  연속 실패 12회 — DART 재차단 추정, 이번 패스 중단.", flush=True)
+                break
         if i % 100 == 0:
             print(f"  {i}/{len(todo)}  (성공 {ok}, 실패 {fail})", flush=True)
 
-    remain = len(sorted(need - _cached_pairs()))
-    print(f"\n완료: 성공 {ok} · 실패 {fail} · 남음 {remain}")
-    if remain:
-        print("남은 게 있으면 잠시 후 다시 실행하면 이어받습니다(캐시 재개형).")
-    else:
-        print("전량 수집 완료 → `python -m backtest.run --compare` 즉시 실행 가능.")
+    remain = len(need - _cached_pairs())
+    print(f"\n패스 종료: 성공 {ok} · 실패 {fail} · 남음 {remain}", flush=True)
+    if remain == 0:
+        print("전량 수집 완료 → run --compare 즉시 실행 가능.")
+    sys.exit(0 if remain == 0 else 2)
 
 
 if __name__ == "__main__":
