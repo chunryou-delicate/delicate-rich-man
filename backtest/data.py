@@ -74,3 +74,12 @@ def daily_close(ticker: str, start: str, end: str) -> pd.Series:
         df = stock.get_market_ohlcv_by_date(start, end, ticker, adjusted=True)
         return df["종가"] if len(df) else pd.Series(dtype=float)
     return _cached(f"close_{ticker}_{start}_{end}", fetch)
+
+
+def daily_ohlc(ticker: str, start: str, end: str) -> pd.DataFrame:
+    """종목 일별 시가·저가·종가(수정주가) — 갭/장중 손절 판정용. 인덱스=Timestamp."""
+    def fetch():
+        df = stock.get_market_ohlcv_by_date(start, end, ticker, adjusted=True)
+        cols = [c for c in ["시가", "저가", "종가"] if c in df.columns]
+        return df[cols] if len(df) else pd.DataFrame(columns=["시가", "저가", "종가"])
+    return _cached(f"ohlc_{ticker}_{start}_{end}", fetch)
