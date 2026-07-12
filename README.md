@@ -21,7 +21,7 @@
 ```
 
 - **[1] 스크리닝 ✅** — DART(재무) + KRX(시세)로 2,700여 종목 실데이터, 3층 필터 뷰어.
-- **[2] 백테스트 ★현재** — 규칙을 과거로 시뮬레이션. 첫 규칙(저PBR+저PER)은 실패로 판명(→ 품질필터 필요).
+- **[2] 백테스트 ★현재** — 규칙을 과거로 시뮬레이션. 저PBR+저PER은 실패로 판명 → **F-Score 품질 필터** 착수(PIT 검증 완료, 전체구간 판정 대기중).
 - [3]~[6] — 진입·청산·자금관리·무인운영. 앞 단계 검증 후 진행.
 
 ## 저장소 구조
@@ -42,10 +42,13 @@ delicate-rich-man/
 │   └─ build.py            진입점
 │
 └─ backtest/               2단계 백테스트 엔진
-    ├─ data.py             과거 데이터(pykrx) + 캐싱
-    ├─ engine.py           월 리밸런싱 루프
+    ├─ data.py             과거 시세(pykrx) + 캐싱
+    ├─ pit_data.py         과거 재무 point-in-time 조회 (공시일 기준 look-ahead 방어)
+    ├─ fscore.py           Piotroski F-Score (품질 필터)
+    ├─ engine.py           월 리밸런싱 루프 (가치 → 품질 2단)
     ├─ metrics.py          CAGR·MDD·샤프
-    └─ run.py              실행·리포트
+    ├─ run.py              실행·리포트 (--compare 판정)
+    └─ collect_pit.py      과거재무 사전수집 (재개형, --full 아카이브)
 ```
 
 **아키텍처 핵심**: 무거운 **수집(파이썬, 키 보유)** ↔ 가벼운 **조회(HTML, 키 없음)** 분리.
