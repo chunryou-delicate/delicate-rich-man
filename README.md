@@ -31,6 +31,8 @@ delicate-rich-man/
 ├─ README.md               이 문서 (프로젝트 홈)
 ├─ ROADMAP.md              전체 6단계 지도
 ├─ CLAUDE.md               1단계 구현 명세 + 결정 기록
+├─ EXPERIMENT_PLAN.md      2단계 실험 헌법 (목표·규율·판정원칙)
+├─ LESSONS.md              2단계에서 배운 것 (반증 경로·방법론·재사용 자산)
 ├─ screener_skeleton.html  스크리너 뷰어 (data.json 을 fetch, 폰/PC 반응형)
 ├─ data.json               수집 결과 = 뷰어 입력 (6지표 실데이터, 공개 데이터라 커밋함)
 ├─ requirements.txt        파이썬 의존성
