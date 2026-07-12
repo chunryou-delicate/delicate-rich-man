@@ -38,9 +38,13 @@ def _amount(rows: list[dict], keys: list[str]) -> float | None:
     return None
 
 
+# 대량 수집 시 DART 부하 완화(캐시 미스에만 적용). 재시도는 dart._get 이 담당.
+_THROTTLE = 0.05
+
+
 def annual(corp_code: str, year: int) -> dict | None:
     """연간(사업보고서) 재무 → F-Score 계정 dict + 공시일(filing_date). 없으면 None."""
-    rows = dart.fetch_financials(corp_code, str(year), "11011")
+    rows = dart.fetch_financials(corp_code, str(year), "11011", throttle=_THROTTLE)
     if not rows:
         return None
     d = {k: _amount(rows, keys) for k, keys in _FIELDS.items()}

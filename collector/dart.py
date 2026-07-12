@@ -25,6 +25,19 @@ BASE = "https://opendart.fss.or.kr/api"
 _SESSION = requests.Session()
 
 
+def _get(path: str, params: dict, tries: int = 4):
+    """DART GET + 재시도(백오프). 대량 수집 중 연결 리셋(10054) 등 일시 오류 복구."""
+    for i in range(tries):
+        try:
+            res = _SESSION.get(f"{BASE}/{path}", params=params, timeout=30)
+            res.raise_for_status()
+            return res
+        except (requests.ConnectionError, requests.Timeout, requests.HTTPError):
+            if i == tries - 1:
+                raise
+            time.sleep(1.5 * (i + 1))   # 1.5s, 3s, 4.5s 백오프
+
+
 @dataclass(frozen=True)
 class Corp:
     """상장사 한 곳의 식별 정보."""
@@ -45,9 +58,7 @@ def download_corp_codes(force: bool = False) -> list[Corp]:
     if force or not xml_path.exists():
         if not config.has_dart_key():
             raise RuntimeError("DART_API_KEY 없음 — .env 에 키를 채우거나 발급 안내를 참조하세요.")
-        res = _SESSION.get(f"{BASE}/corpCode.xml",
-                           params={"crtfc_key": config.DART_API_KEY}, timeout=30)
-        res.raise_for_status()
+        res = _get("corpCode.xml", {"crtfc_key": config.DART_API_KEY})
         # 키 오류 등은 ZIP이 아니라 JSON 에러로 온다.
         if res.headers.get("content-type", "").startswith("application/json"):
             raise RuntimeError(f"DART corpCode 오류: {res.text[:200]}")
@@ -96,14 +107,13 @@ def _fetch_one(corp_code, bsns_year, reprt_code, fs_div, force, throttle) -> lis
     else:
         if not config.has_dart_key():
             raise RuntimeError("DART_API_KEY 없음 — .env 에 키를 채우세요.")
-        res = _SESSION.get(f"{BASE}/fnlttSinglAcntAll.json", timeout=30, params={
+        res = _get("fnlttSinglAcntAll.json", {
             "crtfc_key": config.DART_API_KEY,
             "corp_code": corp_code,
             "bsns_year": bsns_year,
             "reprt_code": reprt_code,
             "fs_div": fs_div,
         })
-        res.raise_for_status()
         payload = res.json()
         cache_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         if throttle:
