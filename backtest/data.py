@@ -37,13 +37,18 @@ def trading_calendar(start: str, end: str) -> list[str]:
     return _cached(f"cal_{start}_{end}", fetch)
 
 
-def rebalance_dates(start: str, end: str) -> list[str]:
-    """월별 리밸런싱일 = 각 달의 마지막 거래일."""
+def rebalance_dates(start: str, end: str, freq: str = "M") -> list[str]:
+    """리밸런싱일 = 각 주기 마지막 거래일. freq: M(월)·Q(분기)·H(반기)."""
     cal = trading_calendar(start, end)
     by_month: dict[str, str] = {}
     for d in cal:
         by_month[d[:6]] = d          # 같은 달이면 뒤 날짜가 덮음 → 월 마지막 거래일
-    return [by_month[m] for m in sorted(by_month)]
+    months = sorted(by_month)
+    if freq == "Q":
+        months = [m for m in months if m[4:6] in ("03", "06", "09", "12")]
+    elif freq == "H":
+        months = [m for m in months if m[4:6] in ("06", "12")]
+    return [by_month[m] for m in months]
 
 
 def fundamental(date: str) -> pd.DataFrame:
