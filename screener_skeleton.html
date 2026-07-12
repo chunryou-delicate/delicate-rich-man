@@ -110,6 +110,8 @@
     width:26px;text-align:center;font-weight:600}
   .card .name{font-size:14.5px;font-weight:650}
   .card .name .sector{font-size:10.5px;color:var(--dim);margin-left:6px;font-weight:400}
+  .card .name .liq{font-size:9px;color:var(--accent2);border:1px solid rgba(240,169,77,.45);
+    border-radius:4px;padding:1px 5px;margin-left:6px;font-weight:600;vertical-align:middle}
   .card .mets{display:flex;gap:14px;flex-wrap:wrap;margin-top:5px}
   .card .mets span{font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
   .card .mets span b{color:var(--ink);font-weight:600}
@@ -191,16 +193,16 @@
         <div class="filt">
           <div class="filt-top"><label data-info="cap">시가총액 하한</label><span class="hint">소형주 제외</span></div>
           <div class="ctl">
-            <input type="range" id="capR" min="0" max="10000" step="100" value="1000">
-            <div class="num"><input type="number" id="capN" value="1000"></div>
+            <input type="range" id="capR" min="0" max="10000" step="100" value="300">
+            <div class="num"><input type="number" id="capN" value="300"></div>
             <span class="unit">억</span>
           </div>
         </div>
         <div class="filt">
           <div class="filt-top"><label data-info="vol">거래대금 하한</label><span class="hint">유동성</span></div>
           <div class="ctl">
-            <input type="range" id="volR" min="0" max="500" step="10" value="50">
-            <div class="num"><input type="number" id="volN" value="50"></div>
+            <input type="range" id="volR" min="0" max="500" step="10" value="20">
+            <div class="num"><input type="number" id="volN" value="20"></div>
             <span class="unit">억</span>
           </div>
         </div>
@@ -217,8 +219,8 @@
         <div class="filt">
           <div class="filt-top"><label data-info="roe">ROE 최소</label><span class="hint">수익 효율 · 높을수록↑</span></div>
           <div class="ctl">
-            <input type="range" id="roeR" min="0" max="40" step="1" value="15">
-            <div class="num"><input type="number" id="roeN" value="15"></div>
+            <input type="range" id="roeR" min="0" max="40" step="1" value="12">
+            <div class="num"><input type="number" id="roeN" value="12"></div>
             <span class="unit">%</span>
           </div>
         </div>
@@ -241,8 +243,8 @@
         <div class="filt">
           <div class="filt-top"><label data-info="debt">부채비율 최대</label><span class="hint">낮을수록 안전</span></div>
           <div class="ctl">
-            <input type="range" id="debtR" min="0" max="300" step="10" value="120">
-            <div class="num"><input type="number" id="debtN" value="120"></div>
+            <input type="range" id="debtR" min="0" max="300" step="10" value="130">
+            <div class="num"><input type="number" id="debtN" value="130"></div>
             <span class="unit">%</span>
           </div>
         </div>
@@ -555,7 +557,7 @@ function render(){
     <div class="card">
       <div class="rank">${i+1}</div>
       <div style="min-width:0">
-        <div class="name">${d.name}<span class="sector">${d.sector||""}</span></div>
+        <div class="name">${d.name}<span class="sector">${d.sector||""}</span>${d.vol!=null&&d.vol<50?'<span class="liq">저유동</span>':''}</div>
         <div class="mets">
           <span>ROE <b>${fmt(d.roe,"%")}</b></span>
           <span>PER <b>${fmt(d.per)}</b></span>
