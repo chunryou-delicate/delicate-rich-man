@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자산 진심 — 적립 지시서 (v0.5)</title>
+<style>
+  :root{
+    --bg:#0f1216; --card:#171b21; --line:#262c35; --fg:#e7ecf3; --mut:#8b97a7;
+    --accent:#4f9dff; --good:#37c07d; --warn:#e0a94a; --def:#ff6b6b;
+    --dom:#4f9dff; --glob:#7a6bff; --bond:#37c07d; --cash:#8b97a7;
+  }
+  @media (prefers-color-scheme:light){
+    :root{--bg:#f4f6fa;--card:#fff;--line:#e2e7ee;--fg:#1a2230;--mut:#5d6b7e;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Malgun Gothic",sans-serif;
+    line-height:1.5;font-size:15px}
+  .wrap{max-width:820px;margin:0 auto;padding:20px 16px 80px}
+  h1{font-size:20px;margin:0 0 2px}
+  .sub{color:var(--mut);font-size:13px;margin-bottom:18px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:16px;margin-bottom:14px}
+  .card h2{font-size:14px;margin:0 0 12px;color:var(--mut);font-weight:600;
+    text-transform:uppercase;letter-spacing:.04em}
+  .grid{display:grid;gap:10px}
+  .g2{grid-template-columns:1fr 1fr}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  @media (max-width:560px){.g4{grid-template-columns:1fr 1fr}}
+  label{display:block;font-size:12px;color:var(--mut);margin-bottom:4px}
+  input{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--fg);
+    border-radius:9px;padding:9px 10px;font-size:15px;font-variant-numeric:tabular-nums;
+    text-align:right}
+  input:focus{outline:none;border-color:var(--accent)}
+  .big input{font-size:20px;font-weight:700;padding:12px}
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th,td{padding:9px 6px;text-align:right;border-bottom:1px solid var(--line);font-size:14px}
+  th{color:var(--mut);font-weight:600;font-size:12px}
+  th:first-child,td:first-child{text-align:left}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .add{color:var(--good);font-weight:700}
+  .zero{color:var(--mut)}
+  .bar{height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:5px;position:relative}
+  .bar>i{position:absolute;top:0;left:0;height:100%;border-radius:4px}
+  .bar>u{position:absolute;top:-3px;width:2px;height:13px;background:var(--fg);opacity:.55}
+  .acct{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}
+  .acct:last-child{border-bottom:0}
+  .acct .n{color:var(--mut);font-size:13px}
+  .acct .v{font-weight:700;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+  .p-ok{background:rgba(55,192,125,.15);color:var(--good)}
+  .p-reb{background:rgba(224,169,74,.15);color:var(--warn)}
+  .note{color:var(--mut);font-size:12px;margin-top:10px;line-height:1.55}
+  .fire{border:1px dashed var(--def);border-radius:12px;padding:12px 14px;margin-top:14px;
+    font-size:12.5px;color:var(--mut)}
+  .fire b{color:var(--def)}
+  .tot{font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>적립 지시서 <span style="color:var(--mut);font-weight:400;font-size:14px">· 균형형 v0.5</span></h1>
+  <div class="sub">이번에 넣을 금액과 현재 잔고만 입력 → 어디에 얼마 넣을지 지시. 주문·자동매매 없음, 100% 결정론.</div>
+
+  <div class="card">
+    <h2>① 이번에 넣을 금액</h2>
+    <div class="big"><input id="new" type="text" inputmode="numeric" value="3,000,000"></div>
+  </div>
+
+  <div class="card">
+    <h2>② 자산별 현재 잔고 (수동 입력)</h2>
+    <div class="grid g4">
+      <div><label><span class="dot" style="background:var(--dom)"></span>국내주식</label><input id="b_dom" type="text" inputmode="numeric" value="4,000,000"></div>
+      <div><label><span class="dot" style="background:var(--glob)"></span>글로벌주식</label><input id="b_glob" type="text" inputmode="numeric" value="2,000,000"></div>
+      <div><label><span class="dot" style="background:var(--bond)"></span>채권</label><input id="b_bond" type="text" inputmode="numeric" value="3,000,000"></div>
+      <div><label><span class="dot" style="background:var(--cash)"></span>현금</label><input id="b_cash" type="text" inputmode="numeric" value="1,000,000"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>③ 계좌 남은 한도 (선택 — 비우면 자산 배분만)</h2>
+    <div class="grid g2">
+      <div><label>연금저축 남은 한도</label><input id="r_pen" type="text" inputmode="numeric" value="1,500,000"></div>
+      <div><label>ISA 남은 한도</label><input id="r_isa" type="text" inputmode="numeric" value="5,000,000"></div>
+    </div>
+    <div class="note">우선순위: 유동성버퍼(현금·CMA) → 연금(세액공제) → ISA(비과세) → 일반 초과분. 한도 수치는 현행 기준으로 직접 입력.</div>
+  </div>
+
+  <div class="card">
+    <h2>④ 이번 배분 지시</h2>
+    <table>
+      <thead><tr><th>자산</th><th>목표</th><th>현재</th><th>→ 이번</th><th>후 잔고 / 비중</th></tr></thead>
+      <tbody id="rows"></tbody>
+      <tfoot><tr class="tot"><td>합계</td><td></td><td id="t_now"></td><td id="t_add" class="add"></td><td id="t_aft"></td></tr></tfoot>
+    </table>
+    <div style="margin-top:14px" id="reb"></div>
+  </div>
+
+  <div class="card" id="acctcard">
+    <h2>⑤ 계좌 배치</h2>
+    <div id="accts"></div>
+  </div>
+
+  <div class="fire">
+    <b>안전장치</b> — 이 도구는 <b>지시만</b> 합니다. 매수·매도 버튼 없음, API·키 없음. 표를 보고 증권사 앱에서 직접 실행하세요.
+    엔진은 policy.json 비율(주70·채20·현10, 주식 국내:글로벌 50:50 언헤지)과 입력값만으로 계산하며, 예측·뉴스·타이밍 판단을 하지 않습니다.
+    글로벌은 <b>환노출(언헤지)</b> — 위기 때 원화 약세가 자연 헤지.
+  </div>
+</div>
+
+<script>
+// policy.json 미러 (엔진과 동일 비율). 정책 변경 시 이 값만 갱신.
+const W = {dom:0.35, glob:0.35, bond:0.20, cash:0.10}; // 국내/글로벌/채권/현금
+const ASSETS = [
+  {k:"dom", nm:"국내주식", c:"var(--dom)", w:W.dom},
+  {k:"glob", nm:"글로벌주식", c:"var(--glob)", w:W.glob},
+  {k:"bond", nm:"채권", c:"var(--bond)", w:W.bond},
+  {k:"cash", nm:"현금", c:"var(--cash)", w:W.cash},
+];
+const BAND = 0.05;
+const won = x => Math.round(x).toLocaleString("ko-KR") + "원";
+const num = id => { const v = document.getElementById(id).value.replace(/[^\d]/g,""); return v? +v : 0; };
+
+function fmtInput(el){
+  const v = el.value.replace(/[^\d]/g,"");
+  el.value = v ? (+v).toLocaleString("ko-KR") : "";
+}
+
+function allocate(newAmt, bal){
+  const totalNow = ASSETS.reduce((s,a)=>s+bal[a.k],0);
+  const totalNew = totalNow + newAmt;
+  const target = {}, deficit = {};
+  let totalDef = 0;
+  ASSETS.forEach(a=>{ target[a.k]=totalNew*a.w; deficit[a.k]=Math.max(0,target[a.k]-bal[a.k]); totalDef+=deficit[a.k]; });
+  const alloc = {};
+  ASSETS.forEach(a=>alloc[a.k]=0);
+  if(newAmt>0){
+    if(totalDef<=0){ ASSETS.forEach(a=>alloc[a.k]=newAmt*a.w); }
+    else if(newAmt<=totalDef){ ASSETS.forEach(a=>alloc[a.k]=newAmt*deficit[a.k]/totalDef); }
+    else { const rem=newAmt-totalDef; ASSETS.forEach(a=>alloc[a.k]=deficit[a.k]+rem*a.w); }
+  }
+  const after={}, afterPct={};
+  ASSETS.forEach(a=>{ after[a.k]=bal[a.k]+alloc[a.k]; afterPct[a.k]=totalNew? after[a.k]/totalNew:0; });
+  const reb = ASSETS.filter(a=>totalNew>0 && Math.abs(afterPct[a.k]-a.w)>BAND).map(a=>a.nm);
+  return {totalNow, totalNew, alloc, after, afterPct, reb};
+}
+
+function placeAccounts(alloc, penRoom, isaRoom){
+  const plan=[];
+  if(alloc.cash>0) plan.push(["일반/CMA (유동성 버퍼)","현금", alloc.cash]);
+  let pool = alloc.dom+alloc.glob+alloc.bond;
+  [["연금저축",penRoom],["ISA",isaRoom]].forEach(([nm,cap])=>{
+    if(pool<=0) return;
+    const put=Math.min(cap,pool);
+    if(put>0){ plan.push([nm,"ETF (국내·글로벌·채권 비율대로)",put]); pool-=put; }
+  });
+  if(pool>0) plan.push(["일반계좌","ETF (국내·글로벌·채권 비율대로)",pool]);
+  return plan;
+}
+
+function render(){
+  const newAmt=num("new");
+  const bal={dom:num("b_dom"),glob:num("b_glob"),bond:num("b_bond"),cash:num("b_cash")};
+  const r=allocate(newAmt,bal);
+  const rows=document.getElementById("rows"); rows.innerHTML="";
+  ASSETS.forEach(a=>{
+    const pct=r.afterPct[a.k]*100, tw=a.w*100;
+    const add=r.alloc[a.k];
+    const tr=document.createElement("tr");
+    tr.innerHTML=
+      `<td><span class="dot" style="background:${a.c}"></span>${a.nm}</td>`+
+      `<td>${tw.toFixed(0)}%</td>`+
+      `<td>${won(bal[a.k])}</td>`+
+      `<td class="${add>0.5?'add':'zero'}">${add>0.5?'+'+won(add):'—'}</td>`+
+      `<td>${won(r.after[a.k])} <span style="color:var(--mut)">(${pct.toFixed(1)}%)</span>`+
+        `<div class="bar"><i style="width:${Math.min(pct,100)}%;background:${a.c}"></i><u style="left:${Math.min(tw,100)}%"></u></div></td>`;
+    rows.appendChild(tr);
+  });
+  document.getElementById("t_now").textContent=won(r.totalNow);
+  document.getElementById("t_add").textContent="+"+won(newAmt);
+  document.getElementById("t_aft").textContent=won(r.totalNew);
+
+  const reb=document.getElementById("reb");
+  reb.innerHTML = r.reb.length
+    ? `<span class="pill p-reb">리밸런싱 필요</span> <span class="note" style="margin:0">밴드 ±5%p 초과: ${r.reb.join(", ")} — 다음 적립부터 미달 자산 우선 매수로 완화(밴드 크게 벗어나면 초과분만 부분매도).</span>`
+    : `<span class="pill p-ok">리밸런싱 불필요</span> <span class="note" style="margin:0">모든 자산 목표 ±5%p 이내.</span>`;
+
+  const penRoom=num("r_pen"), isaRoom=num("r_isa");
+  const card=document.getElementById("acctcard"), box=document.getElementById("accts");
+  const plan=placeAccounts(r.alloc,penRoom,isaRoom);
+  if(newAmt<=0 || plan.length===0){ card.style.display="none"; }
+  else{
+    card.style.display="";
+    box.innerHTML=plan.map(([nm,what,amt])=>
+      `<div class="acct"><div><div class="v">${nm}</div><div class="n">${what}</div></div><div class="v">${won(amt)}</div></div>`).join("");
+  }
+}
+
+document.querySelectorAll("input").forEach(el=>{
+  el.addEventListener("input",()=>{ const p=el.selectionStart; fmtInput(el); render(); });
+});
+render();
+</script>
+</body>
+</html>
